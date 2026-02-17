@@ -274,9 +274,10 @@ func formatTokensWithSubquery(tokens []Token, indent string, depth int) string {
 			parenDepth := 1
 			j := i + 1
 			for j < len(trimmed) && parenDepth > 0 {
-				if trimmed[j].Type == TokenLParen {
+				switch trimmed[j].Type {
+				case TokenLParen:
 					parenDepth++
-				} else if trimmed[j].Type == TokenRParen {
+				case TokenRParen:
 					parenDepth--
 				}
 				j++
