@@ -13,7 +13,7 @@ func unifiedDiff(filename string, original, formatted []byte) ([]byte, error) {
 	if err != nil {
 		return fallbackDiff(filename, original, formatted), nil
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	origFile := filepath.Join(dir, "original")
 	fmtFile := filepath.Join(dir, "formatted")

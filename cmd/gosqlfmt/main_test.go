@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	binaryPath = filepath.Join(dir, "gosqlfmt")
 	cmd := exec.Command("go", "build", "-o", binaryPath, ".")
@@ -142,8 +142,12 @@ func TestCLI_Directory(t *testing.T) {
 
 	file1 := filepath.Join(tmpDir, "a.go")
 	file2 := filepath.Join(tmpDir, "b.go")
-	os.WriteFile(file1, []byte("package main\n\nvar q = `select * from hoge where id = ?`\n"), 0o644)
-	os.WriteFile(file2, []byte("package main\n\nvar q = `SELECT * FROM hoge WHERE id = ?`\n"), 0o644)
+	if err := os.WriteFile(file1, []byte("package main\n\nvar q = `select * from hoge where id = ?`\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file2, []byte("package main\n\nvar q = `SELECT * FROM hoge WHERE id = ?`\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	cmd := exec.Command(binaryPath, "-l", tmpDir)
 	out, err := cmd.Output()
