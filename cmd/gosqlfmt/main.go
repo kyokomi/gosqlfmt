@@ -58,7 +58,9 @@ func processStdin(exitCode *int) error {
 			if err != nil {
 				return fmt.Errorf("diff生成エラー: %w", err)
 			}
-			os.Stdout.Write(diff)
+			if _, err := os.Stdout.Write(diff); err != nil {
+				return fmt.Errorf("stdout書き込みエラー: %w", err)
+			}
 			*exitCode = 1
 		}
 		return nil
@@ -72,7 +74,9 @@ func processStdin(exitCode *int) error {
 		return nil
 	}
 
-	os.Stdout.Write(formatted)
+	if _, err := os.Stdout.Write(formatted); err != nil {
+		return fmt.Errorf("stdout書き込みエラー: %w", err)
+	}
 	return nil
 }
 
@@ -103,7 +107,7 @@ func processPath(path string, exitCode *int) {
 }
 
 func processDirectory(dir string, exitCode *int) {
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "gosqlfmt: %v\n", err)
 			*exitCode = 2
@@ -128,7 +132,10 @@ func processDirectory(dir string, exitCode *int) {
 		// テストファイルはスキップしない（gofmt準拠）
 		processFile(path, exitCode)
 		return nil
-	})
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "gosqlfmt: %v\n", err)
+		*exitCode = 2
+	}
 }
 
 func processFile(filename string, exitCode *int) {
@@ -148,7 +155,7 @@ func processFile(filename string, exitCode *int) {
 
 	if bytes.Equal(src, formatted) {
 		if !*flagList && !*flagDiff && !*flagWrite {
-			os.Stdout.Write(formatted)
+			writeStdout(formatted, exitCode)
 		}
 		return
 	}
@@ -166,7 +173,7 @@ func processFile(filename string, exitCode *int) {
 			*exitCode = 2
 			return
 		}
-		os.Stdout.Write(diff)
+		writeStdout(diff, exitCode)
 		*exitCode = 1
 	}
 
@@ -185,6 +192,13 @@ func processFile(filename string, exitCode *int) {
 	}
 
 	if !*flagList && !*flagDiff && !*flagWrite {
-		os.Stdout.Write(formatted)
+		writeStdout(formatted, exitCode)
+	}
+}
+
+func writeStdout(data []byte, exitCode *int) {
+	if _, err := os.Stdout.Write(data); err != nil {
+		fmt.Fprintf(os.Stderr, "gosqlfmt: stdout書き込みエラー: %v\n", err)
+		*exitCode = 2
 	}
 }

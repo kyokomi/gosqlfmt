@@ -116,9 +116,10 @@ func splitIntoClauses(tokens []Token) []sqlClause {
 	parenDepth := 0
 
 	for _, tok := range tokens {
-		if tok.Type == TokenLParen {
+		switch tok.Type {
+		case TokenLParen:
 			parenDepth++
-		} else if tok.Type == TokenRParen {
+		case TokenRParen:
 			parenDepth--
 		}
 
@@ -190,9 +191,10 @@ func splitByComma(body []Token) [][]Token {
 	parenDepth := 0
 
 	for _, tok := range body {
-		if tok.Type == TokenLParen {
+		switch tok.Type {
+		case TokenLParen:
 			parenDepth++
-		} else if tok.Type == TokenRParen {
+		case TokenRParen:
 			parenDepth--
 		}
 		if parenDepth == 0 && tok.Type == TokenComma {
@@ -217,9 +219,10 @@ func splitByConditions(body []Token) []conditionPart {
 	parenDepth := 0
 
 	for _, tok := range body {
-		if tok.Type == TokenLParen {
+		switch tok.Type {
+		case TokenLParen:
 			parenDepth++
-		} else if tok.Type == TokenRParen {
+		case TokenRParen:
 			parenDepth--
 		}
 		if parenDepth == 0 && tok.Type == TokenKeyword && (tok.Literal == "AND" || tok.Literal == "OR") {

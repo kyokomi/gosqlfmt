@@ -1,1 +1,5 @@
+dist/
 
+# override global gitignore
+!.github/
+!.goreleaser.yml
