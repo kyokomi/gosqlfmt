@@ -123,14 +123,14 @@ OFFSET
 
 ```go
 // Before
-insertSQL := `insert into users (id, name, email, status) values (?, ?, ?, 'active')`
+insertSQL := `insert into users (id, name, email, status, created_at) values (?, ?, ?, 'active', NOW())`
 
 // After
 insertSQL := `
 INSERT INTO
-  users (id, name, email, status)
+  users (id, name, email, status, created_at)
 VALUES
-  (?, ?, ?, 'active')
+  (?, ?, ?, 'active', NOW())
 `
 ```
 
