@@ -35,9 +35,9 @@ LIMIT
 
 	insertSQL := `
 INSERT INTO
-  users (id, name, email, status)
+  users (id, name, email, created_at, status)
 VALUES
-  (?, ?, ?, 'active')
+  (?, ?, ?, NOW(), 'active')
 `
 	_ = insertSQL
 

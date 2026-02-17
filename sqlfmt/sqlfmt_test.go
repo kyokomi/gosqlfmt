@@ -177,8 +177,8 @@ func TestFormat(t *testing.T) {
 		},
 		{
 			name: "INSERT INTO",
-			sql:  "insert into users (id, name, email, status) values (?, ?, ?, 'active')",
-			want: "\nINSERT INTO\n  users (id, name, email, status)\nVALUES\n  (?, ?, ?, 'active')\n",
+			sql:  "insert into users (id, name, email, created_at, status) values (?, ?, ?, NOW(), 'active')",
+			want: "\nINSERT INTO\n  users (id, name, email, created_at, status)\nVALUES\n  (?, ?, ?, NOW(), 'active')\n",
 		},
 		{
 			name: "UPDATE + SET + WHERE",

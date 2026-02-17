@@ -8,7 +8,7 @@ func example() {
 	fugasql := `select id, name from fuga where id = :id and status = :status order by created_at desc limit 30`
 	_ = fugasql
 
-	insertSQL := `insert into users (id, name, email, status) values (?, ?, ?, 'active')`
+	insertSQL := `insert into users (id, name, email, created_at, status) values (?, ?, ?, NOW(), 'active')`
 	_ = insertSQL
 
 	notSQL := `This is not a SQL query, just a regular string`
