@@ -79,18 +79,17 @@ func FormatSource(src []byte) ([]byte, error) {
 	return result, nil
 }
 
-// isSQL はバッククォート内の文字列がSQLかどうか判定する
+// isSQL はバッククォート内の文字列がSQLかどうか判定する。
+// 複数行SQLも検出するため、最初のワードで判定する。
 func isSQL(s string) bool {
-	trimmed := strings.TrimSpace(s)
-	if trimmed == "" {
+	fields := strings.Fields(s)
+	if len(fields) == 0 {
 		return false
 	}
-	upper := strings.ToUpper(trimmed)
-	sqlPrefixes := []string{"SELECT ", "INSERT ", "UPDATE ", "DELETE ", "CREATE ", "ALTER ", "DROP "}
-	for _, prefix := range sqlPrefixes {
-		if strings.HasPrefix(upper, prefix) {
-			return true
-		}
+	firstWord := strings.ToUpper(fields[0])
+	switch firstWord {
+	case "SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP":
+		return true
 	}
 	return false
 }

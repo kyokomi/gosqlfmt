@@ -232,6 +232,27 @@ func TestFormat(t *testing.T) {
 	}
 }
 
+func TestFormat_Idempotent(t *testing.T) {
+	// Format()の結果を再度Format()に通して同じ結果になることを確認
+	sqls := []string{
+		"select * from hoge where id = ?",
+		"SELECT * FROM hoge WHERE id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+		"select u.id, u.name, u.email from users u where u.status = ? order by u.created_at desc limit 10",
+		"insert into users (id, name, email, created_at, status) values (?, ?, ?, NOW(), 'active')",
+		"UPDATE users SET name = ?, email = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+		"delete from users where id = ? and status = 'inactive' and created_at < '2020-01-01'",
+		"select u.id, u.name from users u inner join orders o on u.id = o.user_id where u.status = ? limit 10",
+	}
+
+	for _, sql := range sqls {
+		first := sqlfmt.Format(sql)
+		second := sqlfmt.Format(first)
+		if first != second {
+			t.Errorf("冪等性が保たれていない\n  input:  %q\n  first:  %q\n  second: %q", sql, first, second)
+		}
+	}
+}
+
 func TestFormatWithWidth(t *testing.T) {
 	tests := []struct {
 		name      string

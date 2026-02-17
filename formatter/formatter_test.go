@@ -19,6 +19,11 @@ func TestFormatSource(t *testing.T) {
 			inputFile: "simple.go",
 			wantFile:  "simple.go",
 		},
+		{
+			name:      "複数SQL種別",
+			inputFile: "multiple.go",
+			wantFile:  "multiple.go",
+		},
 	}
 
 	for _, tt := range tests {
@@ -72,6 +77,61 @@ func main() {
 	}
 	if string(got) != string(src) {
 		t.Errorf("SQLを含まないコードは変更されるべきでない\n--- got ---\n%s\n--- want ---\n%s", string(got), string(src))
+	}
+}
+
+func TestFormatSource_Idempotent(t *testing.T) {
+	// goldenファイルを再度フォーマットしても変化しないことを確認
+	goldenFiles := []string{"simple.go", "multiple.go"}
+	for _, name := range goldenFiles {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("..", "testdata", "golden", name)
+			golden, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("goldenファイル読み込みエラー: %v", err)
+			}
+
+			got, err := formatter.FormatSource(golden)
+			if err != nil {
+				t.Fatalf("FormatSource エラー: %v", err)
+			}
+
+			if string(got) != string(golden) {
+				t.Errorf("冪等性が保たれていない（goldenファイルを再フォーマットすると変化した）\n--- got ---\n%s\n--- want ---\n%s", string(got), string(golden))
+			}
+		})
+	}
+}
+
+func TestFormatSource_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name         string
+		src          string
+		shouldChange bool
+	}{
+		{
+			name:         "空のバッククォート文字列",
+			src:          "package main\n\nvar s = ``\n",
+			shouldChange: false,
+		},
+		{
+			name:         "ネストされた括弧を含むSQL",
+			src:          "package main\n\nvar q = `select * from users where id in (select user_id from orders where status in ('active', 'pending')) and name = ?`\n",
+			shouldChange: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := formatter.FormatSource([]byte(tt.src))
+			if err != nil {
+				t.Fatalf("FormatSource エラー: %v", err)
+			}
+			changed := string(got) != tt.src
+			if changed != tt.shouldChange {
+				t.Errorf("期待と異なる: changed=%v, shouldChange=%v\n--- got ---\n%s", changed, tt.shouldChange, string(got))
+			}
+		})
 	}
 }
 
