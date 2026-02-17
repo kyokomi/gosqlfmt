@@ -24,6 +24,11 @@ func TestFormatSource(t *testing.T) {
 			inputFile: "multiple.go",
 			wantFile:  "multiple.go",
 		},
+		{
+			name:      "高度なSQL（BETWEEN/CASE/コメント/サブクエリ）",
+			inputFile: "advanced.go",
+			wantFile:  "advanced.go",
+		},
 	}
 
 	for _, tt := range tests {
@@ -82,7 +87,7 @@ func main() {
 
 func TestFormatSource_Idempotent(t *testing.T) {
 	// goldenファイルを再度フォーマットしても変化しないことを確認
-	goldenFiles := []string{"simple.go", "multiple.go"}
+	goldenFiles := []string{"simple.go", "multiple.go", "advanced.go"}
 	for _, name := range goldenFiles {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("..", "testdata", "golden", name)

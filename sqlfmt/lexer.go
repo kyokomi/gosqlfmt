@@ -46,6 +46,10 @@ func (l *Lexer) Tokenize() []Token {
 		case ch == ')':
 			tokens = append(tokens, Token{TokenRParen, ")"})
 			l.pos++
+		case ch == '-' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '-':
+			tokens = append(tokens, l.readLineComment())
+		case ch == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*':
+			tokens = append(tokens, l.readBlockComment())
 		case ch == '*':
 			tokens = append(tokens, Token{TokenIdentifier, "*"})
 			l.pos++
@@ -130,6 +134,30 @@ func (l *Lexer) readNumber() Token {
 		l.pos++
 	}
 	return Token{TokenNumber, string(l.input[start:l.pos])}
+}
+
+func (l *Lexer) readLineComment() Token {
+	start := l.pos
+	l.pos += 2 // skip --
+	for l.pos < len(l.input) && l.input[l.pos] != '\n' {
+		l.pos++
+	}
+	return Token{TokenLineComment, string(l.input[start:l.pos])}
+}
+
+func (l *Lexer) readBlockComment() Token {
+	start := l.pos
+	l.pos += 2 // skip /*
+	for l.pos < len(l.input)-1 {
+		if l.input[l.pos] == '*' && l.input[l.pos+1] == '/' {
+			l.pos += 2
+			return Token{TokenBlockComment, string(l.input[start:l.pos])}
+		}
+		l.pos++
+	}
+	// 閉じられていない場合は残り全部をコメントとして扱う
+	l.pos = len(l.input)
+	return Token{TokenBlockComment, string(l.input[start:l.pos])}
 }
 
 func (l *Lexer) readOperator() Token {
