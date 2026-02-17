@@ -219,9 +219,10 @@ func splitByConditions(body []Token) []conditionPart {
 	parenDepth := 0
 
 	for _, tok := range body {
-		if tok.Type == TokenLParen {
+		switch tok.Type {
+		case TokenLParen:
 			parenDepth++
-		} else if tok.Type == TokenRParen {
+		case TokenRParen:
 			parenDepth--
 		}
 		if parenDepth == 0 && tok.Type == TokenKeyword && (tok.Literal == "AND" || tok.Literal == "OR") {
