@@ -119,6 +119,16 @@ func TestFormatSource_EdgeCases(t *testing.T) {
 			src:          "package main\n\nvar q = `select * from users where id in (select user_id from orders where status in ('active', 'pending')) and name = ?`\n",
 			shouldChange: true,
 		},
+		{
+			name:         "改行を含むフォーマット済みSQL（冪等性）",
+			src:          "package main\n\nvar q = `\nSELECT\n  *\nFROM\n  hoge\nWHERE\n  id = ?\n  AND status = 'active'\nORDER BY\n  created_at DESC\nLIMIT\n  1\n`\n",
+			shouldChange: false,
+		},
+		{
+			name:         "改行を含む未フォーマットSQL",
+			src:          "package main\n\nvar q = `select *\nfrom users\nwhere id = ? and status = 'active' and role = 'admin' order by created_at desc limit 10`\n",
+			shouldChange: true,
+		},
 	}
 
 	for _, tt := range tests {

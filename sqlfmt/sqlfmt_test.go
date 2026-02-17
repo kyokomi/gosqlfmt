@@ -103,6 +103,16 @@ func TestNormalize(t *testing.T) {
 			want: "SELECT * FROM hoge WHERE id = ?",
 		},
 		{
+			name: "改行を含むSQLの正規化",
+			sql:  "select *\nfrom users\nwhere id = ?",
+			want: "SELECT * FROM users WHERE id = ?",
+		},
+		{
+			name: "改行とタブを含むSQLの正規化",
+			sql:  "select *\n\tfrom users\n\twhere id = ?",
+			want: "SELECT * FROM users WHERE id = ?",
+		},
+		{
 			name: "HAVINGの大文字化",
 			sql:  "select count(*) from users group by status having count(*) > 1",
 			want: "SELECT count(*) FROM users GROUP BY status HAVING count(*) > 1",
@@ -219,6 +229,16 @@ func TestFormat(t *testing.T) {
 			name: "無駄なスペースを含む長いSQL",
 			sql:  "SELECT  id,  name,  email  FROM   users   WHERE  status = ?  AND  role = 'admin'  ORDER BY  id  DESC",
 			want: "\nSELECT\n  id,\n  name,\n  email\nFROM\n  users\nWHERE\n  status = ?\n  AND role = 'admin'\nORDER BY\n  id DESC\n",
+		},
+		{
+			name: "改行を含むSQLの複数行展開",
+			sql:  "select u.id, u.name, u.email\nfrom users u\nwhere u.status = ? and u.role = 'admin'\norder by u.created_at desc limit 10",
+			want: "\nSELECT\n  u.id,\n  u.name,\n  u.email\nFROM\n  users u\nWHERE\n  u.status = ?\n  AND u.role = 'admin'\nORDER BY\n  u.created_at DESC\nLIMIT\n  10\n",
+		},
+		{
+			name: "既にフォーマット済みの複数行SQL（冪等性）",
+			sql:  "\nSELECT\n  *\nFROM\n  hoge\nWHERE\n  id = ?\n  AND status = 'active'\nORDER BY\n  created_at DESC\nLIMIT\n  1\n",
+			want: "\nSELECT\n  *\nFROM\n  hoge\nWHERE\n  id = ?\n  AND status = 'active'\nORDER BY\n  created_at DESC\nLIMIT\n  1\n",
 		},
 	}
 
