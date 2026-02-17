@@ -103,6 +103,16 @@ func TestNormalize(t *testing.T) {
 			want: "SELECT * FROM hoge WHERE id = ?",
 		},
 		{
+			name: "ブロックコメントを含むSQL",
+			sql:  "select /* comment */ * from hoge where id = ?",
+			want: "SELECT /* comment */ * FROM hoge WHERE id = ?",
+		},
+		{
+			name: "ラインコメントを含むSQL",
+			sql:  "select * from hoge -- table\nwhere id = ?",
+			want: "SELECT * FROM hoge -- table\nWHERE id = ?",
+		},
+		{
 			name: "改行を含むSQLの正規化",
 			sql:  "select *\nfrom users\nwhere id = ?",
 			want: "SELECT * FROM users WHERE id = ?",
@@ -236,6 +246,66 @@ func TestFormat(t *testing.T) {
 			want: "\nSELECT\n  u.id,\n  u.name,\n  u.email\nFROM\n  users u\nWHERE\n  u.status = ?\n  AND u.role = 'admin'\nORDER BY\n  u.created_at DESC\nLIMIT\n  10\n",
 		},
 		{
+			name: "BETWEEN...ANDで分割しない",
+			sql:  "SELECT * FROM products WHERE price BETWEEN 100 AND 200 AND status = 'active' ORDER BY price ASC",
+			want: "\nSELECT\n  *\nFROM\n  products\nWHERE\n  price BETWEEN 100 AND 200\n  AND status = 'active'\nORDER BY\n  price ASC\n",
+		},
+		{
+			name: "複数のBETWEEN",
+			sql:  "SELECT * FROM products WHERE price BETWEEN 100 AND 200 AND quantity BETWEEN 10 AND 50 AND status = 'active'",
+			want: "\nSELECT\n  *\nFROM\n  products\nWHERE\n  price BETWEEN 100 AND 200\n  AND quantity BETWEEN 10 AND 50\n  AND status = 'active'\n",
+		},
+		{
+			name: "関数呼び出し内のカンマで分割しない（COALESCE）",
+			sql:  "SELECT COALESCE(u.name, u.email, 'unknown'), u.id FROM users u WHERE u.status = 'active' ORDER BY u.id",
+			want: "\nSELECT\n  COALESCE(u.name, u.email, 'unknown'),\n  u.id\nFROM\n  users u\nWHERE\n  u.status = 'active'\nORDER BY\n  u.id\n",
+		},
+		{
+			name: "関数呼び出し内のキーワードで句分割しない（COUNT DISTINCT）",
+			sql:  "SELECT COUNT(DISTINCT u.id), MAX(u.score) FROM users u WHERE u.status = 'active' GROUP BY u.role",
+			want: "\nSELECT\n  COUNT(DISTINCT u.id),\n  MAX(u.score)\nFROM\n  users u\nWHERE\n  u.status = 'active'\nGROUP BY\n  u.role\n",
+		},
+		{
+			name: "ネストした関数呼び出し",
+			sql:  "SELECT IF(COUNT(*) > 0, MAX(u.score), 0) AS result FROM users u WHERE u.status = 'active' GROUP BY u.role",
+			want: "\nSELECT\n  IF(COUNT(*) > 0, MAX(u.score), 0) AS result\nFROM\n  users u\nWHERE\n  u.status = 'active'\nGROUP BY\n  u.role\n",
+		},
+		{
+			name: "CASE WHEN 基本",
+			sql:  "SELECT id, CASE WHEN status = 1 THEN 'active' WHEN status = 2 THEN 'inactive' ELSE 'unknown' END AS status_label FROM users",
+			want: "\nSELECT\n  id,\n  CASE\n    WHEN status = 1 THEN 'active'\n    WHEN status = 2 THEN 'inactive'\n    ELSE 'unknown'\n  END AS status_label\nFROM\n  users\n",
+		},
+		{
+			name: "複数のCASE式",
+			sql:  "SELECT id, CASE WHEN status = 1 THEN 'active' ELSE 'inactive' END AS status, CASE WHEN role = 'admin' THEN 1 ELSE 0 END AS is_admin FROM users",
+			want: "\nSELECT\n  id,\n  CASE\n    WHEN status = 1 THEN 'active'\n    ELSE 'inactive'\n  END AS status,\n  CASE\n    WHEN role = 'admin' THEN 1\n    ELSE 0\n  END AS is_admin\nFROM\n  users\n",
+		},
+		{
+			name: "ブロックコメント付き複数行SQL",
+			sql:  "SELECT id, /* primary key */ name FROM users WHERE status = 'active' ORDER BY id DESC LIMIT 10",
+			want: "\nSELECT\n  id,\n  /* primary key */ name\nFROM\n  users\nWHERE\n  status = 'active'\nORDER BY\n  id DESC\nLIMIT\n  10\n",
+		},
+		{
+			name: "FROM句のサブクエリ",
+			sql:  "SELECT * FROM (SELECT id, name FROM users WHERE status = ?) t WHERE t.id > 0 ORDER BY t.id",
+			want: "\nSELECT\n  *\nFROM\n  (\n    SELECT\n      id,\n      name\n    FROM\n      users\n    WHERE\n      status = ?\n  ) t\nWHERE\n  t.id > 0\nORDER BY\n  t.id\n",
+		},
+		{
+			name: "WHERE IN サブクエリ",
+			sql:  "SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE status = 'active') AND role = 'admin'",
+			want: "\nSELECT\n  *\nFROM\n  users\nWHERE\n  id IN (\n    SELECT\n      user_id\n    FROM\n      orders\n    WHERE\n      status = 'active'\n  )\n  AND role = 'admin'\n",
+		},
+		{
+			name: "EXISTS サブクエリ",
+			sql:  "SELECT * FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status = 'active')",
+			want: "\nSELECT\n  *\nFROM\n  users u\nWHERE\n  EXISTS (\n    SELECT\n      1\n    FROM\n      orders o\n    WHERE\n      o.user_id = u.id\n      AND o.status = 'active'\n  )\n",
+		},
+		{
+			name: "ネストしたサブクエリ（2段）",
+			sql:  "SELECT * FROM (SELECT id FROM (SELECT id, name FROM users WHERE status = ?) sub1 WHERE sub1.id > 0) sub2",
+			want: "\nSELECT\n  *\nFROM\n  (\n    SELECT\n      id\n    FROM\n      (\n        SELECT\n          id,\n          name\n        FROM\n          users\n        WHERE\n          status = ?\n      ) sub1\n    WHERE\n      sub1.id > 0\n  ) sub2\n",
+		},
+		{
 			name: "既にフォーマット済みの複数行SQL（冪等性）",
 			sql:  "\nSELECT\n  *\nFROM\n  hoge\nWHERE\n  id = ?\n  AND status = 'active'\nORDER BY\n  created_at DESC\nLIMIT\n  1\n",
 			want: "\nSELECT\n  *\nFROM\n  hoge\nWHERE\n  id = ?\n  AND status = 'active'\nORDER BY\n  created_at DESC\nLIMIT\n  1\n",
@@ -262,6 +332,11 @@ func TestFormat_Idempotent(t *testing.T) {
 		"UPDATE users SET name = ?, email = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL",
 		"delete from users where id = ? and status = 'inactive' and created_at < '2020-01-01'",
 		"select u.id, u.name from users u inner join orders o on u.id = o.user_id where u.status = ? limit 10",
+		"SELECT * FROM products WHERE price BETWEEN 100 AND 200 AND status = 'active' ORDER BY price ASC",
+		"SELECT id, CASE WHEN status = 1 THEN 'active' WHEN status = 2 THEN 'inactive' ELSE 'unknown' END AS status_label FROM users",
+		"SELECT id, /* primary key */ name FROM users WHERE status = 'active' ORDER BY id DESC LIMIT 10",
+		"SELECT * FROM (SELECT id, name FROM users WHERE status = ?) t WHERE t.id > 0 ORDER BY t.id",
+		"SELECT * FROM users WHERE id IN (SELECT user_id FROM orders WHERE status = 'active') AND role = 'admin'",
 	}
 
 	for _, sql := range sqls {

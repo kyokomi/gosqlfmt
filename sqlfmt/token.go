@@ -16,6 +16,8 @@ const (
 	TokenRParen                       // )
 	TokenPlaceholder                  // ?, :name, $1
 	TokenWhitespace                   // 空白
+	TokenLineComment                  // -- ...
+	TokenBlockComment                 // /* ... */
 )
 
 // Token はSQLの1トークン
